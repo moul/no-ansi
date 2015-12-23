@@ -1,6 +1,8 @@
 # no-ansi
 :wrench: remove ansi codes
 
+[![GoDoc](https://godoc.org/github.com/moul/no-ansi?status.svg)](https://godoc.org/github.com/moul/no-ansi)
+
 ## Usage
 
 ```console
