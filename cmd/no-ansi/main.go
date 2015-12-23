@@ -4,16 +4,20 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
+	"sync"
 
+	"github.com/kr/pty"
 	"github.com/moul/no-ansi"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
-func NoAnsiStream(inputStream io.Reader, outputStream io.Writer) <-chan bool {
-	finished := make(chan bool, 1)
-
+func NoAnsiStream(inputStream io.Reader, outputStream io.Writer, wg *sync.WaitGroup) {
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		scanner := bufio.NewScanner(inputStream)
 
 		for scanner.Scan() {
@@ -26,55 +30,45 @@ func NoAnsiStream(inputStream io.Reader, outputStream io.Writer) <-chan bool {
 			fmt.Fprintln(outputStream, output)
 		}
 
-		finished <- true
 	}()
-
-	return finished
 }
 
 func main() {
+	var wg sync.WaitGroup
 	if len(os.Args) < 2 {
 		// Read from stdin
-		<-NoAnsiStream(os.Stdin, os.Stdout)
+		NoAnsiStream(os.Stdin, os.Stdout, &wg)
 	} else {
 		// Executing a program
 		spawn := exec.Command(os.Args[1], os.Args[2:]...)
 
-		// Pipe stdin
-		spawn.Stdin = os.Stdin
-
-		// Create reader objects for stdout and stderr
-		stdout, err := spawn.StdoutPipe()
+		// Setup tty
+		tty, err := pty.Start(spawn)
 		if err != nil {
-			panic(err)
+			log.Fatalln(err)
 		}
-		stderr, err := spawn.StderrPipe()
-		if err != nil {
-			panic(err)
+		defer tty.Close()
+
+		// Setup raw input terminal
+		oldState, err := terminal.MakeRaw(0)
+		if err == nil {
+			defer terminal.Restore(0, oldState)
 		}
 
-		// Start
-		if err := spawn.Start(); err != nil {
-			panic(err)
-		}
+		// Process stdout routine
+		NoAnsiStream(tty, os.Stdout, &wg)
 
-		// Create routines for stdout and stderr
-		outFinished := NoAnsiStream(stdout, os.Stdout)
-		errFinished := NoAnsiStream(stderr, os.Stderr)
+		// Forward stdin routine
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+			io.Copy(tty, os.Stdin)
+		}()
 
 		// Wait for program to finish
 		if err := spawn.Wait(); err != nil {
 			panic(err)
 		}
-
-		wait := 2
-		for wait > 0 {
-			select {
-			case <-outFinished:
-				wait--
-			case <-errFinished:
-				wait--
-			}
-		}
 	}
+	wg.Wait()
 }
