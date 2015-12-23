@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -14,30 +12,11 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func NoAnsiStream(inputStream io.Reader, outputStream io.Writer, wg *sync.WaitGroup) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		scanner := bufio.NewScanner(inputStream)
-
-		for scanner.Scan() {
-			line := scanner.Text()
-
-			output, err := noansi.NoAnsiString(line)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Fprintln(outputStream, output)
-		}
-
-	}()
-}
-
 func main() {
 	var wg sync.WaitGroup
 	if len(os.Args) < 2 {
 		// Read from stdin
-		NoAnsiStream(os.Stdin, os.Stdout, &wg)
+		noansi.NoAnsiStream(os.Stdin, os.Stdout, &wg)
 	} else {
 		// Executing a program
 		spawn := exec.Command(os.Args[1], os.Args[2:]...)
@@ -56,7 +35,7 @@ func main() {
 		}
 
 		// Process stdout routine
-		NoAnsiStream(tty, os.Stdout, &wg)
+		noansi.NoAnsiStream(tty, os.Stdout, &wg)
 
 		// Forward stdin routine
 		go func() {
