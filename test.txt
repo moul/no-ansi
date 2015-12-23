@@ -1,0 +1,7 @@
+AAA
+[1;34m BBB[0m
+CCC
+[35m DDD
+EEE
+[0m
+FFF
