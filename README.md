@@ -1,7 +1,7 @@
 # no-ansi
 :wrench: remove ansi codes
 
-[![GoDoc](https://godoc.org/github.com/moul/no-ansi?status.svg)](https://godoc.org/github.com/moul/no-ansi)
+[![GoDoc](https://godoc.org/github.com/moul/no-ansi?status.svg)](https://godoc.org/github.com/moul/no-ansi) [![GuardRails badge](https://badges.production.guardrails.io/moul/no-ansi.svg)](https://www.guardrails.io)
 
 ## Usage
 
